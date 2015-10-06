@@ -1,0 +1,31 @@
+#include <string.h>
+char *creatingbuffer {
+    FILE *filestream = fopen (///filename, rb);/// filestream is a stream pointer for opened file. open as a binary file.
+    assert (filestream);
+    assert (!fseek (filestream, 0, SEEK_END));
+    long filelength = ftell (filestream); /// calculating the length of the opened file
+    char *buffer = (char*) calloc (filelength, sizeof(char)); /// extracting dynamic memory for buffer
+    assert (!(filelength - fread(buffer, sizeof(char), filelength, filestream)));
+    assert (!(fclose(filestream)));
+    return buffer;
+}
+char **creatingtext (char *buffer) {
+    int i = 0;
+    for (i = 0; i < strlen(buffer); i++) {
+        if (buffer[i] == '\n') textlength++; ///calculating the amount of strings for text
+    }
+    char **text = (char **)  calloc (textlength, sizeof(char*)); /// extracting dynamic memory for text \R \N !!!!
+    text[0] = buffer; ///taking strings from the buffer and writing them into the text
+    int counter = 1;
+    for (i = 0; i < strlen(buffer);) {
+        if ((buffer[i] = '\n') {
+            if (!buffer[i+2]) break;
+            i += 2;
+            text[counter] = *buffer[i];
+            ++counter;
+        }
+        else ++i;
+    }
+    free (buffer); ///freeing memory that buffer was using
+    buffer = NULL;
+}
