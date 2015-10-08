@@ -1,9 +1,13 @@
 #include <string.h>
-char *creatingbuffer {
-    FILE *filestream = fopen (///filename, rb);/// filestream is a stream pointer for opened file. open as a binary file.
+#include <locale>
+#include <ctype.h>
+#define size_t unsigned int;
+setlocale(LC_ALL, "Russian");
+char *creatingbuffer (char *source) {
+    FILE *filestream = fopen (source, rb);/// filestream is a stream pointer for opened file. open as a binary file.
     assert (filestream);
     assert (!fseek (filestream, 0, SEEK_END));
-    long filelength = ftell (filestream); /// calculating the length of the opened file
+    size_t filelength = ftell (filestream); /// calculating the length of the opened file
     char *buffer = (char*) calloc (filelength, sizeof(char)); /// extracting dynamic memory for buffer
     assert (!(filelength - fread(buffer, sizeof(char), filelength, filestream)));
     assert (!(fclose(filestream)));
@@ -11,6 +15,7 @@ char *creatingbuffer {
 }
 char **creatingtext (char *buffer) {
     int i = 0;
+    size_t textlength = 0;
     for (i = 0; i < strlen(buffer); i++) {
         if (buffer[i] == '\n') textlength++; ///calculating the amount of strings for text
     }
@@ -19,8 +24,8 @@ char **creatingtext (char *buffer) {
     int counter = 1;
     for (i = 0; i < strlen(buffer);) {
         if ((buffer[i] = '\n') {
-            if (!buffer[i+2]) break;
-            i += 2;
+            if (!buffer[i+1]) break;
+            ++i;
             text[counter] = *buffer[i];
             ++counter;
         }
@@ -28,4 +33,60 @@ char **creatingtext (char *buffer) {
     }
     free (buffer); ///freeing memory that buffer was using
     buffer = NULL;
+    return text;
+}
+size_t mystrlen(const char *s) { ///strlen analogue that works with \n as a string delimiter instead of \0 !!! заменить size_t
+    size_t i;
+    for (i = 0; s[i] != '\n'; ++i);
+    return i;
+}
+int strcomparefrombeginning (void *svoid1, void *svoid2) { /// function that compares two strings counting from the beginning while ignoring puncts
+    char *s1 = (char *) svoid1;
+    char *s2 = (char *) svoid2;
+    int result = 0;
+    int i = 0;
+    size_t s1length = mystrlen(s1), s2length = mystrlen(s2);
+    assert (mystrlen(s1));
+    assert (mystrlen(s2));
+    size_t min;
+    if (s1length > s2length)
+        min = s2length;
+    else min = s1length;
+    for (i = 0; (i < min)&& (result == 0); ++i)
+    {
+        if ((!ispunct(s1[i]))&&(!ispunct(s2[i]))) {
+            if (s1[i] > s2[i]) result = 1;
+            if (s1[i] < s2[i]) result = -1;
+        }
+    }
+    return result;
+}
+int strcomparefromend (void *svoid1, void *svoid2) { /// function that compares two strings counting from the end while ignoring puncts
+    char *s1 = (char *) svoid1;
+    char *s2 = (char *) svoid2;
+    int result = 0;
+    int i = 0;
+    size_t s1length = mystrlen(s1), s2length = mystrlen(s2);
+    assert (mystrlen(s1));
+    assert (mystrlen(s2));
+    size_t min;
+    size_t s1counter = s1length - 1, s2counter = s2length - 1;
+    if (s1length > s2length)
+        min = s2length;
+    else
+        min = s1length;
+    for (i = 0; (i < min)&& (result == 0); ++i)
+    {
+        if ((!ispunct(s1[s1counter]))&&(!ispunct(s2[s2counter]))) {
+            if (s1[s1counter] > s2[s2counter]) result = 1;
+            if (s1[s1counter] < s2[s2counter]) result = -1;
+        }
+        --s1counter;
+        --s2counter;
+    }
+}
+int main () {
+    char *buffer = cratingbuffer;
+    char *source = "onegin.txt";
+
 }
