@@ -1,0 +1,63 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <assert.h>
+
+typedef int type;
+
+struct stack_t{
+    type* data;
+    unsigned int counter;
+    unsigned int stack_length;
+};
+
+void create_stack(stack_t *This, unsigned int length);
+
+int push(stack_t* This, type item);
+
+type pop(stack_t* This);
+
+void print(const stack_t* This);
+
+void create_stack(stack_t *This, unsigned int length){
+    assert(This);
+    assert(length);
+
+    This -> data = (type*)calloc(length, sizeof(type));
+    This -> counter = 0;
+    This -> stack_length = length;
+}
+
+int push(stack_t* This, type item){
+    assert(This);
+    if(!((This -> stack_length) - (This -> counter))) {
+        printf("ERROR STACK OVERFLOW\n");
+        return 1;
+    }
+    This -> data[This -> counter] = item;
+    This -> counter++;
+    return 0;
+}
+
+type pop(stack_t* This){
+    assert(This);
+
+    type item = (This -> data[This -> counter]);
+    (This -> counter)--;
+    return item;
+}
+
+void print(const stack_t* This){
+    if ((!This) || !(This -> counter)){
+        printf ("The structure was deleted!\n");
+    }
+    for (unsigned int i=0; i < (This -> counter); i++)
+        printf("%d element : %d\n", i, (int(This -> data[i])));
+}
+
+void destruct(stack_t* This){
+    assert(This);
+
+    free(This -> data);
+    This -> data = NULL;
+    This -> counter = 0;
+}
