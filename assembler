@@ -1,0 +1,228 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <assert.h>
+#include <string.h>
+#include "stack.h"
+
+#include "header.h"
+
+#define IN "input.txt"
+#define OUT "output.txt"
+
+#define GOTO_FIRST_NUM 2
+#define GOTO_LAST_NUM 7
+#define PUSH_NUM 1
+#define MARKS_MAX 10
+///"if" generators
+#define _DEFIFCMD(cmdstr) \
+    if (!strcmp (lexemes[i], #cmdstr)) { \
+        cmds[cmd_counter++] = (char) cmdstr; \
+        structs++; \
+        concursion = 1; \
+        if(cmdstr == PUSH_NUM) {\
+            args[arg_counter] = atof(lexemes[++i]); \
+            cmds[cmd_counter++] = (char) (NUM_OF_CMDS + arg_counter); \
+            arg_counter++; \
+        } \
+        if((cmdstr >= GOTO_FIRST_NUM)&&(cmdstr <= GOTO_LAST_NUM)) {\
+            asked[asked_counter] = lexemes[++i]; \
+            asked_position[asked_counter++] = cmd_counter++; \
+        }\
+    }
+
+#define _DEFIFMARK \
+    if (lexemes[i][0] == ':') { \
+        cmds[cmd_counter++] = (char) mark; \
+        typed[typed_counter] = lexemes[i]+1;\
+        marks[typed_counter++] = (double) structs; \
+        concursion = 1; \
+    }
+
+#define _CLOSE()\
+    free(cmds); \
+    cmds = NULL; \
+    free(args); \
+    args = NULL; \
+    free(lexemes); \
+    lexemes = NULL; \
+    free(buffer); \
+    buffer = NULL; \
+    free(marks); \
+    marks = NULL; \
+    free(typed); \
+    typed = NULL; \
+    free(asked); \
+    asked = NULL; \
+    free(asked_position); \
+    asked_position = NULL;
+
+//#define RELEASE
+
+int assemble(const char* in_path, const char* out_path);
+
+int failure(char *message);
+
+int main () {
+
+    int result = assemble(IN, OUT);
+
+    return result;
+
+}
+
+int assemble (const char* in_path, const char* out_path) {
+    assert(in_path);
+    assert(out_path);
+
+
+    FILE* instream = fopen (in_path, "rb");
+    assert (instream);
+    fseek (instream, 0, SEEK_END);
+    unsigned int file_length = ftell (instream);
+    rewind (instream);
+
+    char *buffer = (char*) calloc (file_length+1, sizeof(char));
+    assert(buffer);
+
+    int bufferprint = fread(buffer, file_length, sizeof(char), instream); /// reading file into buffer
+    assert (bufferprint);
+    buffer[file_length] = ' ';/// to make sure strtok always works correctly
+
+    int fileinclose = fclose(instream); /// closing file
+    assert(!fileinclose);
+
+    unsigned int number_of_lxms = 0;
+    for(int i = 0; i <= file_length; i++){
+        if ((buffer[i] == ' ')||(buffer[i] == '\n')) number_of_lxms++;
+    }
+
+    #ifndef RELEASE
+    ///console indicator
+    printf("amount of lexemes %d\n\n", number_of_lxms);
+    #endif // RELEASE
+
+    char **lexemes = (char **) calloc (number_of_lxms, sizeof(char *));
+    assert(lexemes);
+
+    lexemes[0] = strtok(buffer, " \r\n"); /// strtok first call
+    char *pointer = NULL;
+    for (int i = 1; ((pointer = strtok(NULL, " \r\n"))&&(i<number_of_lxms)); i++) {
+        if (!pointer) break;
+        lexemes[i] = pointer;
+    }
+
+    char *cmds = (char *) calloc (number_of_lxms, sizeof(char));
+    assert(cmds);
+
+    double *args = (double *) calloc(number_of_lxms, sizeof(double));
+    assert(args);
+
+    double *marks = (double*)calloc(MARKS_MAX, sizeof(double));
+    assert(marks);
+
+    char **typed = (char **) calloc (MARKS_MAX, sizeof(char *));
+    assert(typed);
+
+    char **asked = (char **) calloc (MARKS_MAX, sizeof(char *));
+    assert(asked);
+
+    int *asked_position = (int *) calloc(MARKS_MAX, sizeof(int));
+    assert(asked_position);
+
+    unsigned int typed_counter = 0, asked_counter = 0, cmd_counter = 0, arg_counter = 0, structs = 0;
+    for (int i = 0, concursion = 0; ((i < number_of_lxms)&&(lexemes[i] != "")); i++, concursion = 0) {
+        _DEFIFMARK
+        _DEFIFCMD(cmdend)
+        _DEFIFCMD(push)
+        _DEFIFCMD(jump)
+        _DEFIFCMD(ju)
+        _DEFIFCMD(jue)
+        _DEFIFCMD(je)
+        _DEFIFCMD(jae)
+        _DEFIFCMD(ja)
+        _DEFIFCMD(pop)
+        _DEFIFCMD(add)
+        _DEFIFCMD(sub)
+        _DEFIFCMD(mul)
+        _DEFIFCMD(cmddiv)
+        if (!concursion) { /// program causes fatal error message to prevent further mistakes when processing
+            printf("fatal error. mistake found in lexeme \"%s\". data not assembled.\n",lexemes[i]);
+            _CLOSE();
+            return 1;
+        }
+    }
+
+    for (int i = 0; i < typed_counter; i++) {
+        for (int j = 0; j < asked_counter; j++) {
+            if (!strcmp(typed[i], asked[j])) {
+                args[arg_counter] = marks[i];
+                cmds[asked_position[j]] = (char) arg_counter + NUM_OF_CMDS;
+                arg_counter++;
+                typed[i] = "\0";
+                asked[j] = "\0";
+            }
+        }
+    }
+
+    int jump_failure = 0;
+    for (int i = 0; i < typed_counter; i++)
+        if (typed[i] != "\0") {
+                printf("mark \"%s\" has no jump referring to it\n", typed[i]);
+                jump_failure = 1;
+
+        }
+
+    for (int i = 0; i < asked_counter; i++)
+        if (asked[i] != "\0") {
+                printf("jump refers to non-existing mark \"%-s\"\n", asked[i]);
+                jump_failure = 1;
+        }
+
+    if (jump_failure) {
+        _CLOSE();
+        return 2;
+    }
+    #ifndef RELEASE
+    ///console indicator - DAMP
+    for (int i = 0; i < number_of_lxms; i++) {
+            if (cmds[i]<NUM_OF_CMDS)
+                printf("lexeme number %-2d : %-10.10s | cmd code : %-10d\n", i, lexemes[i], cmds[i]);
+            else
+                printf("lexeme number %-2d : %-10.10s | arg code : %-10.7lf\n", i, lexemes[i], args[cmds[i] - (char) NUM_OF_CMDS]);
+            printf("______________________________|_____________________\n");
+    }
+    #endif // RELEASE
+
+    FILE* outstream = fopen (out_path, "wb");
+    assert (outstream);
+
+    struct cmd_arg_t {
+    char command;
+    double argument;
+    };
+
+    cmd_arg_t *cmd_arg_arr = (cmd_arg_t *) calloc(number_of_lxms, sizeof(cmd_arg_t));
+    unsigned int cmd_arr_counter = 0;
+    for (int i = 0; i < number_of_lxms; i++) {
+            if (cmds[i]<NUM_OF_CMDS) {
+                    cmd_arg_arr[cmd_arr_counter].command = cmds[i];
+                    if (cmds[i+1]<NUM_OF_CMDS)
+                        cmd_arg_arr[cmd_arr_counter].argument = 0;
+                    else {
+                        cmd_arg_arr[cmd_arr_counter].argument = args[cmds[i+1] - (char) NUM_OF_CMDS];
+                    }
+                    if(!cmds[i]) break;
+                    cmd_arr_counter++;
+                }
+    }
+
+    int written = fwrite((const void *)cmd_arg_arr, sizeof(cmd_arg_t), cmd_arr_counter, outstream);
+    assert(!(written - cmd_arr_counter));
+
+    int fileoutclose = fclose(outstream); /// closing file
+    assert(!fileoutclose);
+
+    _CLOSE();
+
+    return 0;
+}
