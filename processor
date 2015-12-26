@@ -1,0 +1,256 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <assert.h>
+#include <float.h>
+
+#include "stack.h"
+#include "header.h"
+
+#define IN "output.txt" /// TODO rename output and input files
+#define _COMPARE CMP_EQ = cmp_eq_flag(cmdstack)
+
+//#define RELEASE
+
+struct cmd_arg_t {
+    char command;
+    double argument;
+};
+
+struct info_t {
+    cmd_arg_t *buffer;
+    stack_t *cmdstack;
+    unsigned int *counter;
+    double *reg;
+};
+
+
+typedef void (*func)(info_t *cmd_info);
+
+void CMD_push (info_t *cmd_info);
+
+void CMD_jump (info_t *cmd_info);
+
+void CMD_ju (info_t *cmd_info);
+
+void CMD_jue (info_t *cmd_info);
+
+void CMD_je (info_t *cmd_info);
+
+void CMD_jae (info_t *cmd_info);
+
+void CMD_ja (info_t *cmd_info);
+
+void CMD_mark (info_t *cmd_info);
+
+void CMD_pop (info_t *cmd_info);
+
+void CMD_add (info_t *cmd_info);
+
+void CMD_sub (info_t *cmd_info);
+
+void CMD_mul (info_t *cmd_info);
+
+void CMD_div (info_t *cmd_info);
+
+void CMD_end (info_t *cmd_info);
+
+int CMP_EQ = -2;
+
+cmd_arg_t *creatingbuffer (const char *source, unsigned int *bufferlength);
+
+int main () {
+    stack_t objectstack;
+    stack_t *cmdstack = &objectstack;
+    assert(cmdstack);
+    unsigned int cmdstack_length = 5;
+    stack_create(cmdstack, cmdstack_length);
+    double reg = 0; /// the only register for now
+    unsigned int counter = 0;
+
+    func funct_arr[NUM_OF_CMDS - 1];
+
+    unsigned int RAMlength = 0;
+    cmd_arg_t *cmdRAM = creatingbuffer(IN, &RAMlength);
+    assert(cmdRAM);
+
+    info_t cmd_info = {cmdRAM, cmdstack, &counter, &reg};
+
+    funct_arr[0]  = CMD_end;
+    funct_arr[1]  = CMD_push;
+    funct_arr[2]  = CMD_jump;
+    funct_arr[3]  = CMD_ju;
+    funct_arr[4]  = CMD_jue;
+    funct_arr[5]  = CMD_je;
+    funct_arr[6]  = CMD_jae;
+    funct_arr[7]  = CMD_ja;
+    funct_arr[8]  = CMD_mark;
+    funct_arr[9]  = CMD_pop;
+    funct_arr[10] = CMD_add;
+    funct_arr[11] = CMD_sub;
+    funct_arr[12] = CMD_mul;
+    funct_arr[13] = CMD_div;
+
+     for (; counter < RAMlength; counter++) {
+        (*(funct_arr[cmdRAM[counter].command]))(&cmd_info);
+        //printf("counter %d\n", counter);
+    }
+    
+
+    stack_destruct (cmdstack);
+    free(cmdRAM);
+    cmdRAM = NULL;
+
+}
+
+cmd_arg_t *creatingbuffer (const char *source, unsigned int *bufferlength) {
+    assert(source);
+    FILE *filestream = fopen (source, "rb");
+    assert (filestream);
+    /// setting cursor on the end of the file
+    fseek (filestream, 0, SEEK_END);
+
+    unsigned int filelength = 0;
+    /// calculating the length of the opened file
+    filelength = ftell (filestream);
+    rewind (filestream);
+    filelength /= sizeof(cmd_arg_t);
+    filelength++;
+     /// extracting dynamic memory for buffer
+    cmd_arg_t *buffer = (cmd_arg_t*) calloc (filelength, sizeof(cmd_arg_t));
+    assert(buffer);
+    /// reading file into buffer
+    int bufferprint = fread((void *)buffer, sizeof(cmd_arg_t), filelength,  filestream);
+    assert (bufferprint);
+
+
+    int filestreamclose = fclose(filestream);
+    assert (!filestreamclose);
+    *bufferlength = filelength;
+    return buffer;
+}
+
+void CMD_push (info_t *cmd_info) {
+    assert(cmd_info);
+    stack_push(cmd_info->cmdstack, cmd_info->buffer[*(cmd_info->counter)].argument);
+    #ifndef RELEASE
+    stack_print(cmd_info->cmdstack);
+    #endif // RELEASE
+}
+
+void CMD_jump (info_t *cmd_info) {
+    assert(cmd_info);
+    //*i = mark-1;
+        printf("%d\n", *(cmd_info->counter));
+    *(cmd_info->counter) = ((cmd_info->buffer[*(cmd_info->counter)]).argument) - 1;
+        printf("%d\n", *(cmd_info->counter));
+
+    #ifndef RELEASE
+    stack_print(cmd_info->cmdstack);
+    #endif // RELEASE
+}
+
+void CMD_ju (info_t *cmd_info) {
+    assert(cmd_info);
+    if (CMP_EQ == 1) //*i = mark-1;
+        *(cmd_info->counter) = (cmd_info->buffer[*(cmd_info->counter)].argument) - 1;
+    #ifndef RELEASE
+    stack_print(cmd_info->cmdstack);
+    #endif // RELEASE
+};
+
+void CMD_jue (info_t *cmd_info) {
+    assert(cmd_info);
+    if ((CMP_EQ == 1)||(CMP_EQ == 0)) //*i = mark-1;
+        *(cmd_info->counter) = (cmd_info->buffer[*(cmd_info->counter)].argument) - 1;
+    #ifndef RELEASE
+    stack_print(cmd_info->cmdstack);
+    #endif // RELEASE
+}
+
+void CMD_je (info_t *cmd_info) {
+    assert(cmd_info);
+    if (CMP_EQ == 0) //*i = mark-1;
+        *(cmd_info->counter) = (cmd_info->buffer[*(cmd_info->counter)].argument) - 1;
+    #ifndef RELEASE
+    stack_print(cmd_info->cmdstack);
+    #endif // RELEASE
+}
+
+void CMD_jae (info_t *cmd_info) {
+    assert(cmd_info);
+    if ((CMP_EQ == 2)||(CMP_EQ == 0)) //*i = mark-1;
+        *(cmd_info->counter) = (cmd_info->buffer[*(cmd_info->counter)].argument) - 1;
+    #ifndef RELEASE
+    stack_print(cmd_info->cmdstack);
+    #endif // RELEASE
+}
+
+void CMD_ja (info_t *cmd_info) {
+    assert(cmd_info);
+    if (CMP_EQ == 2) //*i = mark-1;
+        *(cmd_info->counter) = (cmd_info->buffer[*(cmd_info->counter)].argument) - 1;
+    #ifndef RELEASE
+    stack_print(cmd_info->cmdstack);
+    #endif // RELEASE
+}
+
+void CMD_mark (info_t *cmd_info) {
+    printf("KARL MARKS!\n");
+}
+
+void CMD_pop (info_t *cmd_info) {
+    assert(cmd_info);
+
+    *(cmd_info->reg) = stack_pop(cmd_info->cmdstack);
+    #ifndef RELEASE
+    stack_print(cmd_info->cmdstack);
+    printf("\nregister value %lf\n", *(cmd_info->reg));
+    #endif // RELEASE
+}
+
+void CMD_add (info_t *cmd_info) {
+    assert(cmd_info);
+    double summand1 = stack_pop(cmd_info->cmdstack);
+    double summand2 = stack_pop(cmd_info->cmdstack);
+    //printf("sum1 %lf sum2 %lf ", summand1, summand2);
+    stack_push(cmd_info->cmdstack, (summand1 + summand2));
+    #ifndef RELEASE
+    stack_print(cmd_info->cmdstack);
+    #endif // RELEASE
+}
+
+void CMD_sub (info_t *cmd_info) {
+    assert(cmd_info);
+    stack_push(cmd_info->cmdstack, -(stack_pop(cmd_info->cmdstack) - stack_pop(cmd_info->cmdstack)));
+    #ifndef RELEASE
+    stack_print(cmd_info->cmdstack);
+    #endif // RELEASE
+}
+
+void CMD_mul (info_t *cmd_info) {
+    assert(cmd_info);
+    stack_push(cmd_info->cmdstack, stack_pop(cmd_info->cmdstack) * stack_pop(cmd_info->cmdstack));
+    #ifndef RELEASE
+    stack_print(cmd_info->cmdstack);
+    #endif // RELEASE
+}
+
+void CMD_div (info_t *cmd_info) {
+    assert(cmd_info);
+    double divider = stack_pop(cmd_info->cmdstack);
+    if (divider) stack_push(cmd_info->cmdstack, (stack_pop(cmd_info->cmdstack)/divider));
+        else {
+        printf("error. division by zero.");
+        stack_push(cmd_info->cmdstack, FLT_MAX);
+        };
+    #ifndef RELEASE
+    stack_print(cmd_info->cmdstack);
+    #endif // RELEASE
+}
+
+void CMD_end (info_t *cmd_info) {
+    assert(cmd_info);
+    printf("final stack state\n");
+    stack_print(cmd_info->cmdstack);
+    printf("\nregister value %lf\n", *(cmd_info->reg));
+}
