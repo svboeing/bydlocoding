@@ -1,0 +1,305 @@
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <assert.h>
+#include <ctype.h>
+#include <locale>
+
+//#define RELEASE
+
+/// execution mode
+enum mode {
+    cmpfrombeginning,
+    cmpfromend
+};
+
+/// main executing function
+int exe (char *output, char **text, unsigned int textlength, mode cmpmode);
+
+/// function that puts whole file into a buffer
+char *creatingbuffer (char *source, unsigned int *bufferlength);
+
+/// function that divides buffer to strings and creates text out of them
+char **creatingtext (char *buffer,  unsigned int bufferlength, unsigned int *textlength);
+
+/// strlen analog that works with \n as a string limiter instead of \0
+unsigned int mystrlen (const char *s);
+
+/// function that compares two strings counting from the beginning while ignoring puncts
+int strcomparefrombeginning (const void *svoid1, const void *svoid2);
+
+/// function that compares two strings counting from the end while ignoring puncts
+int strcomparefromend (const void *svoid1, const void *svoid2);
+
+/// function that puts text into a file
+int frombuffer (const char* output, char** text, unsigned int textlength);
+
+int main (int argc, char* argv[]) {
+    setlocale(LC_ALL, "Russian");
+    if (argc != 4) {
+        printf("error. wrong argc typed");
+        return 1;
+    }
+
+    #define IN argv[1]
+    #define OUT1 argv[2]
+    #define OUT2 argv[3]
+
+    unsigned int bufferlength = 0;
+    char *buffer = creatingbuffer (IN, &bufferlength);
+    if (buffer == (char *)1) {
+            printf("error. %s file cannot be opened", IN);
+            return 1;
+    }
+
+    if (buffer == (char *)2) {
+            printf("error. %s file cannot be closed", IN);
+            return 2;
+    }
+    unsigned int textlength = 0;
+    char **text = creatingtext(buffer, bufferlength, &textlength);
+    /// executing main process
+    int result = exe(OUT1, text, textlength, cmpfrombeginning);
+    if (result == 3) {
+            printf("error. %s file cannot be opened", OUT1);
+            return result;
+    }
+    if (result == 4) {
+            printf("error. %s file cannot be closed", OUT1);
+            return result;
+    }
+    if (result == 5) {
+            printf("you chose not to rewrite %s\n", OUT1);
+    }
+
+    /// executing main process
+    result = exe(OUT2, text, textlength, cmpfromend);
+    if (result == 3) {
+            printf("error. %s file cannot be opened", OUT2);
+            return result;
+    }
+    if (result == 4) {
+            printf("error. %s file cannot be closed", OUT2);
+            return result;
+    }
+    if (result == 5) {
+            printf("you chose not to rewrite %s\n", OUT2);
+    }
+
+    /// freeing memory used by text
+    free (text);
+    text = NULL;
+
+    /// freeing memory used by buffer
+    free (buffer);
+    buffer = NULL;
+    return 0;
+}
+
+int exe (char *output, char **text, unsigned int textlength, mode cmpmode) {
+    assert(output);
+    assert(text);
+    assert(textlength);
+    assert((cmpmode == 0)||(cmpmode == 1));
+
+    switch (cmpmode) {
+        case cmpfrombeginning:
+            qsort((void *)text, textlength, sizeof(char*), strcomparefrombeginning);
+            #ifndef RELEASE
+            /// console indicator
+            printf("sorted from the beginning\n");
+            #endif
+            break;
+        case cmpfromend:
+            qsort((void *)text, textlength, sizeof(char*), strcomparefromend);
+            #ifndef RELEASE
+            /// console indicator
+            printf("sorted from the end\n");
+            #endif
+            break;
+    }
+
+    int writing = frombuffer(output, text, textlength);
+    return writing;
+}
+
+char *creatingbuffer (char * source, unsigned int *bufferlength) {
+    //assert(source);
+    FILE *filestream = fopen (source, "rb");
+    if (!filestream) {
+            return (char *)1;
+    }
+    //assert (filestream);
+    /// setting cursor on the end of the file
+    fseek (filestream, 0, SEEK_END);
+
+    unsigned int filelength = 0;
+    /// calculating the length of the opened file
+    filelength = ftell (filestream);
+    rewind (filestream);
+
+     /// extracting dynamic memory for buffer
+    char *buffer = (char*) calloc (filelength+2, sizeof(char));
+    assert(buffer);
+    /// reading file into buffer
+    int bufferprint = fread(buffer, filelength, sizeof(char), filestream);
+    assert (bufferprint);
+
+    /// adding \n to the end of buffer to make sure mystrlen always works
+    buffer [filelength] = '\n';
+    /// adding \0 to the end of buffer just in case
+    buffer [filelength+1] = '\0';
+    int filestreamclose = fclose(filestream);
+    if(filestreamclose) {
+
+            return (char *)2;
+    }
+    //assert (!filestreamclose);
+
+    #ifndef RELEASE
+    /// console indicator
+    unsigned int sourcelength = strlen(source);
+    for (int i = 0; i < sourcelength; i++) printf("%c",source[i]);
+    printf(" buffer created\n");
+    #endif
+
+    /// returning length of file back to main(). Increased by 1 because of \n added
+    *bufferlength = (filelength+1);
+    return buffer;
+}
+
+char **creatingtext (char *buffer, unsigned int bufferlength, unsigned int *textlength) {
+    assert(buffer);
+    int textlengthcounter = 0;
+    for (int i = 0; i < bufferlength; i++) {
+         /// calculating the amount of strings for text
+        if (buffer[i] == '\n') textlengthcounter++;
+    }
+
+    /// extracting dynamic memory for text
+    char **text = (char **)  calloc (textlengthcounter, sizeof(char*));
+    assert(text);
+    /// taking strings from the buffer and putting them into the text
+    text[0] = buffer;
+    int counter = 1;
+    for (int i = 0; i < bufferlength;i++) {
+        if (buffer[i] == '\n') {
+            text[counter] = buffer+i+1;
+            counter++;
+        }
+    }
+    #ifndef RELEASE
+    /// console indicator
+    printf("text created\n");
+    #endif
+
+    /// returning length of text back to main()
+    *(textlength) = textlengthcounter;
+    return text;
+}
+
+unsigned int mystrlen(const char *s) {
+    assert(s);
+    unsigned int i;
+    for (i = 0; s[i] != '\n'; ++i);
+    return i;
+}
+
+int strcomparefrombeginning (const void *svoid1, const void *svoid2) {
+    const char *s1 = *(const char **) svoid1;
+    const char *s2 = *(const char **) svoid2;
+    assert(s1);
+    assert(s2);
+
+    int result = 0;
+    unsigned int s1counter = 0, s2counter = 0;
+    unsigned int s1length = mystrlen(s1), s2length = mystrlen(s2);
+
+    for (; (s1counter < s1length)&&(s2counter < s2length)&&(result == 0);)
+    {
+        for(;(ispunct(s1[s1counter]))||(s1[s1counter] == ' ');)
+            ++s1counter;
+        for(;(ispunct(s2[s2counter]))||(s2[s2counter] == ' ');)
+            ++s2counter;
+        if (tolower(s1[s1counter]) < tolower(s2[s2counter])) result = -1;
+        if (tolower(s1[s1counter]) > tolower(s2[s2counter])) result = 1;
+        ++s1counter;
+        ++s2counter;
+    }
+    if (result == 0) {
+         /// if strings are same the shorter one goes first
+        if (s1length > s2length) result = 1;
+        if (s1length < s2length) result = -1;
+    }
+    return result;
+}
+
+int strcomparefromend (const void *svoid1, const void *svoid2) {
+    const char *s1 = *(const char **) svoid1;
+    const char *s2 = *(const char **) svoid2;
+    assert(s1);
+    assert(s2);
+
+    int result = 0;
+    unsigned int s1length = mystrlen(s1), s2length = mystrlen(s2);
+    int s1counter = s1length - 1, s2counter = s2length - 1;
+    for (; (s1counter >= 0)&&(s2counter >= 0)&&(result == 0); )
+    {
+        for(;(ispunct(s1[s1counter]))||(s1[s1counter] == ' ');)
+            --s1counter;
+        for(;(ispunct(s2[s2counter]))||(s2[s2counter] == ' ');)
+            --s2counter;
+        if (tolower(s1[s1counter]) < tolower(s2[s2counter])) result = -1;
+        if (tolower(s1[s1counter]) > tolower(s2[s2counter])) result = 1;
+        --s1counter;
+        --s2counter;
+    }
+    if (result == 0) {
+        /// if strings are same the shorter one goes first
+        if (s1length > s2length) result = 1;
+        if (s1length < s2length) result = -1;
+    }
+    return result;
+}
+
+int frombuffer (const char* output, char** text, unsigned int textlength){
+    assert(output);
+    assert(text);
+    FILE* fileex = fopen(output, "rb");
+    if(fileex) {
+        printf("are you sure you want to rewrite %s ? type Y\\N\n", output);
+        char* ans = (char *)calloc(1,sizeof(char));
+        scanf("%s", ans);
+        if (strcmp(ans, "Y")) return 5;
+    }
+    fclose(fileex);
+    FILE* fileout = fopen(output, "w");
+    if(!fileout) {
+
+        return 3;
+    }
+    //assert(fileout);
+    for (unsigned int i=0; i < textlength; i++){
+        int j=0;
+        while (text[i][j]!='\n'){
+            fputc(text[i][j], fileout);
+            j++;
+        }
+        fputc('\n', fileout);
+    }
+    int fileoutclose = fclose(fileout);
+    if(fileoutclose) {
+
+        return 4;
+    }
+    //assert(!fileoutclose);
+
+    #ifndef RELEASE
+    /// console indicator
+    unsigned int outputlength = strlen(output);
+    for (int i = 0; i < outputlength; i++) printf("%c",output[i]);
+    printf(" writing complete\n");
+    #endif
+
+    return 0;
+}
