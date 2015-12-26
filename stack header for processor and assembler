@@ -1,0 +1,105 @@
+#ifndef STACK_H_INCLUDED
+#define STACK_H_INCLUDED
+#include <limits.h>
+
+typedef double type; 
+
+struct stack_t{
+    type* data;
+    unsigned int counter;
+    unsigned int stack_length;
+};
+
+int cmp_eq_flag (stack_t *This);
+
+void stack_create(stack_t *This, unsigned int length);
+
+int stack_push(stack_t* This, type item);
+
+type stack_pop(stack_t* This);
+
+void stack_print(const stack_t* This);
+
+void stack_destruct(stack_t* This);
+
+int cmp_eq_flag (stack_t *This) {
+     type b = stack_pop(This);
+     type a = stack_pop(This);
+     if ( a == b )  return 0;
+     if ( a < b )   return 1;
+     if ( a > b )   return 2;
+     return -1;
+}
+
+unsigned int eq_flag (stack_t *This) {
+    if ((stack_pop(This)) == (stack_pop(This))) return 1;
+    return 0;
+}
+
+
+void stack_create(stack_t *This, unsigned int length){
+    assert(This);
+    assert(length);
+
+    This -> data = (type*)calloc(length, sizeof(type));
+    This -> counter = 0;
+    This -> stack_length = length;
+}
+
+int stack_push(stack_t* This, type item){
+    assert(This);
+    if(!((This -> stack_length) - (This -> counter))) {
+        type *newpointer = (type *)realloc(This->data, 2*sizeof(type)*(This->stack_length));
+        unsigned int newlength = 2*This->stack_length;
+        if(!newpointer) {
+                newpointer = (type *)realloc(This->data, sizeof(type)*(This->stack_length + 1));
+                newlength = This->stack_length + 1;
+        }
+        if(!newpointer) {
+            printf("no memory\n");
+            return 1;
+        }
+        This->data = newpointer;
+        This->stack_length = newlength;
+            printf("Stack overflown. Reallocated to %d\n", This->stack_length);
+        for (unsigned int i = This->counter + 1; i<This->stack_length; i++)
+            This->data[i] = 0;
+    }
+    This -> data[This -> counter] = item;
+    This -> counter++;
+    return 0;
+}
+
+type stack_pop(stack_t* This){
+    assert(This);
+
+    if (!(This -> counter)) {
+        printf("Stack empty! Pop not done");
+        return 0;
+    }
+    type item = (This -> data[(This -> counter)-1]);
+    This -> data[(This -> counter)-1] = 0;
+    (This -> counter)--;
+    return item;
+}
+
+void stack_print(const stack_t* This){
+    assert(This);
+
+    printf("\n");
+    if (!This) printf ("The structure is deleted\n");
+    if (!(This -> counter)) printf ("Stack is empty\n");
+
+    for (unsigned int i=0; i < (This -> stack_length); i++)
+        printf("element %d = %lf\n", i, This -> data[i]);
+    printf("amount of elements %d\n", This -> counter);
+    printf("length %d\n", This -> stack_length);
+}
+
+void stack_destruct(stack_t* This){
+    assert(This);
+    This -> counter = 0;
+    This -> stack_length = 0;
+}
+
+#endif // STACK_H_INCLUDED
