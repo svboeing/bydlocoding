@@ -1,0 +1,23 @@
+#ifndef HEADER_H_INCLUDED
+#define HEADER_H_INCLUDED
+#define NUM_OF_CMDS (14 + 1)
+
+enum cmd {
+    cmdend, /// otherwise redefenition
+    push,   /// PUSH_NUM
+    jump,   /// Jump           GOTO_FIRST_NUM
+    ju,     /// Jump if under
+    jue,    /// Jump if under or equals
+    je,     /// Jump if equals
+    jae,    /// Jump if above or equals
+    ja,     /// Jump if above    GOTO_LAST_NUM
+    mark,
+    pop,
+    add,
+    sub,
+    mul,
+    cmddiv  /// otherwise redefenition
+};
+
+
+#endif // HEADER_H_INCLUDED
